@@ -3,25 +3,93 @@ CHOIIZUKA Test AI Program
 
 ---
 
-📘 【CHOIIZUKA-AI】Web埋め込みLLM 設置・運用マニュアル本マニュアルは、GitHub Pagesを利用してクライアントサイド動作型（WebAssembly/WebGPU）の軽量LLMチャットシステムを設置・更新するための手順書です。📂 1. ディレクトリ構造のルールGitHubリポジトリ（またはサーバー）のルート直下に、以下のようにディレクトリを配置します。text[GitHubリポジトリルート]
-│
-├── TestAI/               📂 テスト設置環境（今回の作業場所）
-│   └── index.html        📄 先ほど作成したシングルHTMLソースコード
-│
-└── AI/                   📂 本番設置環境（将来の移行先）
-    └── (空または準備用ファイル)
-コードは注意してご使用ください。テスト用URL: https://choiizuka.com本番用URL: https://choiizuka.com🚀 2. 初回設置の手順（3ステップ）【ステップ1】ファイルの保存先ほど出力した index.html のソースコードをコピーします。ローカル環境に TestAI というフォルダを作り、その中に index.html という名前で保存します。【ステップ2】GitHubへのプッシュ対象のGitHubリポジトリに TestAI/index.html を追加します。以下のコマンド、またはGitHubデスクトップアプリ等でメインブランチにプッシュします。bashgit add TestAI/index.html
-git commit -m "feat: CHOIIZUKA-AIのテスト設置"
-git push origin main
-コードは注意してご使用ください。【ステップ3】GitHub Pagesの設定確認GitHubリポジトリの [Settings] ＞ [Pages] を開きます。Build and deployment の Source が Deploy from a branch になっていることを確認します。Branch が main（または master）、フォルダが / (root) に設定されていることを確認します。数分待って、https://choiizuka.com にブラウザでアクセスします。🛠️ 3. 動作確認（トラブルシューティング）設置後、ページを開いて以下の3点を確認してください。画面上部のゲージ（プログレスバー）が動き、ダウンロードの％が進むか？🛑 進まない場合: ネットワークの接続状態か、CDN（jsdelivr.net）へのアクセスがブロックされていないか確認してください。「準備完了」に切り替わるか？🛑 「エラー発生」になる場合: ブラウザのデベロッパーツール（F12 キー ＞ Consoleタブ）を開き、エラー内容を確認します。古いスマホや特定のブラウザ環境（WebAssembly/WebGPU未対応環境）では動作しない場合があります。日本語で会話ができるか？ユーザー入力欄に「こんにちは」と入れ、Qwen-0.5Bから適切な返答がストリーミング、または一括で返ってくるかテストします。🔄 4. 将来の運用のためのメモ💡 本番環境（/AI/）への移行方法テスト環境（/TestAI/）での動作に満足し、本番公開する準備ができたら、TestAI/index.html をそのまま AI/index.html にコピー（複製）してGitHubにプッシュするだけで本番移行が完了します。🤖 将来、より賢いモデル（GemmaやPhi-3など）に変えたくなった場合index.html の <script> 内にある以下のモデル指定部分（144行目付近）を書き換えます。javascript// 現在（Qwen-0.5B：約350MB）
-generator = await pipeline('text-generation', 'Xenova/Qwen1.5-0.5B-Instruct', { ... })
+# 👑 choiizuka.com 専用：Qwen-0.5B WebAI 配置・配信仕様書
 
-// 将来の変更例（Gemma-2B：約1.4GBに変えたい場合 ※Hugging FaceにONNX互換モデルがある前提）
-generator = await pipeline('text-generation', 'Xenova/gemma-2b-it', { ... })
-コードは注意してご使用ください。※モデルを変更する場合、ファイルサイズが大きくなるためユーザーの初回ロード時間が長くなる点に注意してください。
+## 1. 設置ディレクトリ構造（サーバー側）
+シンフリーサーバーの公開フォルダ（public_html 等）の直下に、本番用とテスト用のディレクトリをそれぞれ作成し、モデルファイルや関連スクリプトを丸ごと配置します。
+public_html/
+  ├── AI/                     <-- 本番環境
+  │    ├── index.html         (チャット画面)
+  │    ├── main.js            (メイン処理スクリプト)
+  │    ├── worker.js          (裏処理用 Web Worker)
+  │    └── qwen-model/        <-- ⭕️ ここに Qwen-0.5B のモデルファイル群を丸ごと配置
+  │          └── model.onnx   (約350MBの単一モデルファイル等)
+  │
+  └── TESTAI/                 <-- テスト環境（本番と完全に独立）
+       ├── index.html
+       ├── main.js
+       ├── worker.js
+       └── qwen-model/        <-- ⭕️ テスト用のモデル配置エリア
+             └── model.onnx
+
+## 2. サーバー設定（.htaccess）の書き込み仕様
+各環境の qwen-model/ フォルダの直下に、以下の内容を記述した .htaccess ファイルを設置します（タイムアウトや503エラーを防ぐ必須設定です）。
+
+### 1. ONNXファイルを正しいバイナリデータとして認識させる
+AddType application/octet-stream .onnx
+AddType application/wasm .wasm
+
+### 2. サーバー側でのリアルタイム圧縮（Gzip等）を強制禁止する
+
+#### ※350MBのファイルをサーバーのCPUで圧縮しようとしてハングアップするのを防ぎます
+<IfModule mod_deflate.c>
+    SetEnvIfNoCase Request_URI \.onnx$ no-gzip dont-vary
+    SetEnvIfNoCase Request_URI \.wasm$ no-gzip dont-vary
+</IfModule>
+
+### 3. ブラウザ側（JavaScript）の接続先・設計値
+ライブラリ（例: Transformers.js）が外部（Hugging Face）に見に行かないよう、コード側で指定する絶対パスの設計値です。
+🌐 接続先エンドポイント（URL）の固定
+
+* 本番環境（/AI/）のコード指定URL： https://choiizuka.com
+* テスト環境（/TESTAI/）のコード指定URL： https://choiizuka.com
+⏱️ タイムアウトとリトライの監視ルール（Worker内）
+単一の巨大ファイル（350MB）をスムーズに引き抜くためのパラメータです。
+
+* データ受信無応答の監視（タイムアウト）：20秒 （ダウンロード中に20秒間、1バイトもデータが進まなかったら「サイレント切断」と判定する）
+* 自動リトライ回数：1回 （切断検知後、自動的に最初からもう一度だけダウンロードをやり直す）
+
+### 4. キャッシュと挙動のルール
+
+1. 初回アクセス： choiizuka.com から約350MBの model.onnx を丸ごと一本ダウンロードします。画面のプログレスバーで進捗（〇％完了）を表示します。ダウンロード完了と同時にブラウザの「Cache API」に丸ごと保存します。
+2. 2回目以降のアクセス： ブラウザが「すでにキャッシュがある」と判定し、サーバー（choiizuka.com）への通信を発生させずにローカルから一瞬でモデルを読み込みます。これによりサーバーへの負荷は初回訪問時の1回のみに抑えられます。
 
 ---
 
-🛠️ 自作LLMモデルをロードする際の手順と注意点1. モデルを「ONNX形式」に変換しておく必要があるブラウザ上のJavaScriptでLLMを動かすため、Python等で自作したモデル（PyTorchの .safetensors や .bin 形式）を、そのままではブラウザが読めません。事前にONNX（オニキス）形式、またはWebGPU（Wasm）に対応した形式に変換（エクスポート）しておく必要があります。簡単な方法：Hugging Face公式のツール（optimum-cli）を使うと、コマンド1発で自作LLMをTransformers.js対応のONNX形式に変換できます。2. 自作モデルの「置き場所」の選択肢HTMLの pipeline('text-generation', 'モデルのパス') の部分に、自作モデルの場所を指定します。置き場所は大きく分けて2つあります。パターンA：Hugging Faceにアップロードする（推奨・簡単）自作モデルをHugging Face（無料）のリポジトリにアップロードしておけば、コード側はリポジトリ名（例: 'CHOIIZUKA/my-own-llm-0.5b'）と書くだけで、自動的に世界中の高速なCDNからブラウザへダウンロードされます。パターンB：自分のサーバー（CHOIIZUKA.COM）に配置する完全に独自のサーバー内にモデルファイルを置くことも可能です。その場合は、HTMLから見た相対パス（例: './my_models/custom-qwen/'）を指定します。※注意：自社サーバーに置く場合は、サーバー側で「CORS設定（他のオリジンからのアクセス許可）」と「大容量ファイルの配信最適化」が必要になる場合があります。
+## 📂 タスク1：Qwen-0.5B モデルファイルのダウンロード手順
+
+### 1. パソコン側に受け皿となるフォルダを作る
+
+デスクトップなどに、新しく qwen-model という名前のフォルダを作っておきます。ダウンロードしたファイルはすべてこの中に入れます。
+
+### 2. Hugging Faceの対象ページを開く
+ブラウザで以下のURL（Hugging Faceのファイル一覧ページ）を開きます。
+👉 huggingface.co
+
+### 3. 最低限必要なファイルをダウンロードする
+
+ページ内にファイルの一覧が表示されています。各ファイルの右側にあるダウンロードアイコン（↓）をクリックして、先ほど作った qwen-model フォルダの中に保存してください。
+「丸ごと配置」するために最低限必要なファイルは以下の通りです。
+
+ファイル名	役割	容量（目安）
+config.json	モデルの基本設定	数 KB
+tokenizer.json	文字をデータに変換する辞書	約 2 MB
+tokenizer_config.json	文字変換の設定	数 KB
+onnx/model_quantized.onnx	⭕️ AIの本体（量子化済み）	約 370 MB
+
+⚠️ 注意点：ページ内の onnx というフォルダの中に model_quantized.onnx があります。これが約370MBの本体ファイルです。これ1本をダウンロードすればOKです（通常の model.onnx は約1GBあるので、軽い方の _quantized を選びます）。
+
+### 4. フォルダ内の配置を確認する
+
+ダウンロードが終わったら、パソコンの qwen-model フォルダの中身が以下のようになっているか確認してください。
+
+qwen-model/
+  ├── config.json
+  ├── tokenizer.json
+  ├── tokenizer_config.json
+  └── onnx/
+        └── model_quantized.onnx  <-- onnxというフォルダの中に本体を入れます
+        
+これでパソコン側へのモデルの準備は完了です。Hugging Faceから直接手元に落としたため、もう外部サイトの遅延を気にする必要はありません。
 
 ---
