@@ -46,6 +46,27 @@
             letter-spacing: 0.5px;
         }
 
+        /* ステータスバッジ（ぐるぐるインジケーター内蔵） */
+        .status-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* 👑 改良ポイント1: ぐるぐる回るインジケーター (CSSスピナー) */
+        .spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+            border-top-color: #b7791f;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         #status-badge {
             font-size: 0.8rem;
             padding: 4px 8px;
@@ -53,11 +74,18 @@
             background-color: #ffecc7;
             color: #b7791f;
             font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         #status-badge.ready {
             background-color: #e6fffa;
             color: #234e52;
+        }
+
+        #status-badge.ready .spinner {
+            display: none; /* 準備完了したら非表示 */
         }
 
         /* プログレスバー */
@@ -157,7 +185,12 @@
 
     <header>
         <h1>CHOIIZUKA-AI <span style="font-size:0.8rem; color:#888;">(Test Mode)</span></h1>
-        <div id="status-badge">AI読込中...</div>
+        <div class="status-wrapper">
+            <div id="status-badge">
+                <div class="spinner" id="status-spinner"></div>
+                <span id="status-text">AI読込中...</span>
+            </div>
+        </div>
         <div id="progress-container">
             <div id="progress-bar"></div>
         </div>
@@ -169,7 +202,7 @@
 
     <div id="input-container">
         <input type="text" id="user-input" placeholder="AIの準備を待っています..." disabled autocomplete="off">
-        <button id="send-btn" id="send-btn" disabled>➔</button>
+        <button id="send-btn" disabled>➔</button>
     </div>
 
     <!-- Transformers.js v3 をインポート -->
@@ -180,27 +213,33 @@
         const userInput = document.getElementById('user-input');
         const sendBtn = document.getElementById('send-btn');
         const statusBadge = document.getElementById('status-badge');
+        const statusText = document.getElementById('status-text');
+        const statusSpinner = document.getElementById('status-spinner');
         const progressBar = document.getElementById('progress-bar');
 
         let generator = null;
         let messages = [];
 
+        // 👑 改良ポイント2: AIに毎回渡せる「裏コマンド（システムプロンプト）」の指定機能
+        // ここに指示（キャラクター設定やルール）を書き込むと、AIのすべての回答に適用されます。
+        const SECRET_COMMAND = "あなたは「Truth-Science（真理科学）」の専門AIアシスタント『CHOIIZUKA-AI』です。宇宙の真理、ベイズ統計、最新テクノロジーについて、知的かつ親しみやすいトーンで、必ず丁寧な日本語で回答してください。";
+
         // 1. AIモデルの初期化処理
         async function initAI() {
             try {
-                // Qwen-0.5B-InstructのONNX量子化モデルをロード
                 generator = await pipeline('text-generation', 'Xenova/Qwen1.5-0.5B-Instruct', {
                     progress_callback: (data) => {
                         if (data.status === 'progress') {
                             progressBar.style.width = `${data.progress}%`;
-                            statusBadge.innerText = `ダウンロード中: ${Math.round(data.progress)}%`;
+                            statusText.innerText = `ダウンロード中: ${Math.round(data.progress)}%`;
                         }
                     }
                 });
 
                 // 準備完了UIへの切り替え
-                statusBadge.innerText = "準備完了";
+                statusText.innerText = "準備完了";
                 statusBadge.classList.add('ready');
+                statusSpinner.style.display = 'none'; // ぐるぐるを消す
                 progressBar.style.width = '100%';
                 userInput.placeholder = "宇宙の真理について質問する...";
                 userInput.disabled = false;
@@ -209,7 +248,8 @@
                 appendMessage('ai', 'AIの準備が完了しました！ブラウザ内で安全に動作しています。何でも聞いてください。');
             } catch (error) {
                 console.error(error);
-                statusBadge.innerText = "エラー発生";
+                statusText.innerText = "エラー発生";
+                statusSpinner.style.display = 'none';
                 statusBadge.style.backgroundColor = "#fed7d7";
                 statusBadge.style.color = "#9b2c2c";
                 appendMessage('ai', 'モデルの読み込みに失敗しました。WebGPU/Wasm環境、またはネットワーク接続を確認してください。');
@@ -236,14 +276,22 @@
             userInput.value = '';
             userInput.disabled = true;
             sendBtn.disabled = true;
-            statusBadge.innerText = "思考中...";
+            statusText.innerText = "思考中...";
+            statusSpinner.style.display = 'block'; // 思考中もぐるぐるさせる
+            statusSpinner.style.borderTopColor = '#234e52'; // 色を合わせる
 
-            // 会話履歴の保存（Chat Templates形式）
+            // 会話履歴の保存
             messages.push({ role: 'user', content: text });
 
             try {
-                // LLM推論の実行
-                const prompt = generator.tokenizer.apply_chat_template(messages, { tokenize: false, add_generation_prompt: true });
+                // 👑 裏コマンド（システムプロンプト）を会話履歴の最前列に結合して推論に渡す
+                // これにより、AIは毎回設定を忘れることなく応答します。
+                const fullMessages = [
+                    { role: 'system', content: SECRET_COMMAND },
+                    ...messages
+                ];
+
+                const prompt = generator.tokenizer.apply_chat_template(fullMessages, { tokenize: false, add_generation_prompt: true });
                 const output = await generator(prompt, {
                     max_new_tokens: 256,
                     temperature: 0.7,
@@ -251,7 +299,7 @@
                     return_full_text: false,
                 });
 
-                const aiResponse = output[0].generated_text.trim();
+                const aiResponse = output.generated_text.trim();
                 
                 // AIメッセージの表示と履歴保存
                 appendMessage('ai', aiResponse);
@@ -259,20 +307,13 @@
 
             } catch (error) {
                 console.error(error);
-                appendMessage('ai', '申し訳ありません。推論中にエラーが発生しました。');
-            } finally {
-                userInput.disabled = false;
-                sendBtn.disabled = false;
-                statusBadge.innerText = "準備完了";
-                userInput.focus();
-            }
-        }
+
+        appendMessage('ai', '申し訳ありません。推論中にエラーが発生しました。');} 
+
+        finally {userInput.disabled = false;sendBtn.disabled = false;statusText.innerText = "準備完了";statusSpinner.style.display = 'none'; // ぐるぐるを隠すuserInput.focus();}}
 
         // イベントリスナーの登録
-        sendBtn.addEventListener('click', handleSend);
-        userInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') handleSend();
-        });
+        sendBtn.addEventListener('click', handleSend);userInput.addEventListener('keypress', (e) => {if (e.key === 'Enter') handleSend();});
 
         // 起動
         initAI();
