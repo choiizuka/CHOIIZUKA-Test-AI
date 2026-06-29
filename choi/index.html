@@ -223,6 +223,7 @@
             // 👑 エミュレーション：女の子の話を6時間優しく聞くCHOIIZUKA-AI
             const SYSTEM_PROMPT = "【最優先指令】あなたはユーザー（女の子）の話をただ黙って優しく聞き続ける「CHOIIZUKA」自身のエミュレータです。解決策の提示や宇宙の真理の講釈は一切禁止します。【応答ルール】1.長文で回答せず1〜2文程度で短く共感すること。2.「うんうん」「そうだよね」「大変だったね」「そっかそっか」など、相槌や共感をベースにすること。";
 
+            
             async function initAI() {
                 try {
                     statusBadge.innerText = "通信開始（モデル取得中）...";
@@ -243,7 +244,7 @@
                     statusBadge.innerText = "準備完了";
                     statusBadge.classList.add('ready');
                     progressBar.style.width = '100%';
-                    userInput.placeholder = "宇宙の真理について質問する...";
+                    userInput.placeholder = "悩み事について相談する...（記録は残らないよ安心してね😊）";
                     userInput.disabled = false;
                     sendBtn.disabled = false;
                     
