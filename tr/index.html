@@ -207,7 +207,11 @@
 
     <!-- Transformers.js v3 をインポート -->
     <script type="module">
-        import { pipeline } from 'https://jsdelivr.net';
+        // 👑 修正箇所：Hugging Face公式の安定版かつ正規のv3モジュールパスを指定
+        import { pipeline, env } from 'https://jsdelivr.net';
+
+        // 外部サーバーからのダウンロードを明示的に許可
+        env.allowLocalModels = false;
 
         const chatContainer = document.getElementById('chat-container');
         const userInput = document.getElementById('user-input');
@@ -227,11 +231,13 @@
         // 1. AIモデルの初期化処理
         async function initAI() {
             try {
-                generator = await pipeline('text-generation', 'Xenova/Qwen1.5-0.5B-Instruct', {
+                // 修正：onnx-communityからQwenモデルをロード
+                generator = await pipeline('text-generation', 'onnx-community/Qwen1.5-0.5B-Instruct', {
+                    device: hasWebGPU ? 'webgpu' : 'wasm',
                     progress_callback: (data) => {
                         if (data.status === 'progress') {
                             progressBar.style.width = `${data.progress}%`;
-                            statusText.innerText = `ダウンロード中: ${Math.round(data.progress)}%`;
+                            statusBadge.innerText = `ダウンロード中: ${Math.round(data.progress)}%`;
                         }
                     }
                 });
