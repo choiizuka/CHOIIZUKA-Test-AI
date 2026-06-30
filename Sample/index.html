@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>MINIMUM TEST</title>
+</head>
+<body>
+    <h1>AI起動テスト（公式最小構成）</h1>
+    <div id="output">起動中...</div>
+
+    <script type="module">
+        // 公式推奨のESモジュール直引インポート
+        import { pipeline } from 'https://jsdelivr.net';
+
+        async function test() {
+            try {
+                // 最も軽いQwenモデルをロード
+                const generator = await pipeline('text-generation', 'onnx-community/Qwen1.5-0.5B-Instruct', { device: 'wasm' });
+                
+                // テスト実行
+                const output = await generator('こんにちは', { max_new_tokens: 10 });
+                
+                document.getElementById('output').innerText = output[0].generated_text;
+            } catch (e) {
+                document.getElementById('output').innerText = 'エラー: ' + e.message;
+            }
+        }
+        test();
+    </script>
+</body>
+</html>
