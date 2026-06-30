@@ -23,7 +23,7 @@ async function initAI() {
     
     try {
         // 設計に合わせた自前サーバー内モデルの相対パスと量子化ファイル名を狙い撃ち
-        generator = await pipeline('text-generation', './qwen-model/', {
+        generator = await pipeline('text-generation', './local-model/', {
             model_file_name: 'onnx/model_quantized.onnx',
             device: 'wasm',
             progress_callback: (data) => {
