@@ -8,7 +8,8 @@
     const loadingSpinner = document.getElementById('loading-spinner');
 
     // 👑 解決策：MIMEタイプチェックをすり抜けるため、明示的に通常のWeb Workerオブジェクトとして生成
-    const aiWorker = new Worker('worker.js');
+    //const aiWorker = new Worker('worker.js');
+    const aiWorker = new Worker('worker.js', { type: 'module' });
 
     // 画面にチャットバブルを追加する関数
     function appendMessage(sender, text) {
