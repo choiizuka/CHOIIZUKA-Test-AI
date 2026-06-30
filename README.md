@@ -93,3 +93,9 @@ qwen-model/
 これでパソコン側へのモデルの準備は完了です。Hugging Faceから直接手元に落としたため、もう外部サイトの遅延を気にする必要はありません。
 
 ---
+
+---
+
+## 関連記事
+
+- [【CHOIIZUKA.COM】CHOIIZUKA-AIホームページに準備中🌏(テスト)」](https://choiizuka.com/20260630-choiizuka-comchoiizuka-ai-test-info/)
