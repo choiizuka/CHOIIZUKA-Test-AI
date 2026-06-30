@@ -316,4 +316,11 @@ Qwen2.5-0.
 
 ## 関連URL
 
+### Models
+- [@huggingface-Xenova/distilbert-base-uncased-finetuned-sst-2-english](https://huggingface.co/Xenova/distilbert-base-uncased-finetuned-sst-2-english/)
+- [@huggingface-Qwen2.5-0.5B-Instruct](https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct)
+
+### Status
+- [huggingface status](https://status.huggingface.co/)
+
 (C) 2026 CHOIIZUKA.
