@@ -8,7 +8,8 @@
     const loadingSpinner = document.getElementById('loading-spinner');
 
     // 👑 4大原則：トラブル要因排除。Classic Workerとして起動
-    const aiWorker = new Worker('worker.js');
+    //const aiWorker = new Worker('worker.js');
+    const aiWorker = new Worker('worker.js', { type: 'module' });
 
     function appendMessage(sender, text) {
         const msgBubble = document.createElement('div');
