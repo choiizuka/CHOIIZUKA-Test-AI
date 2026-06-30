@@ -2,30 +2,39 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>MINIMUM TEST</title>
+    <title>MINIMUM AI TEST</title>
 </head>
 <body>
     <h1>AI起動テスト（公式最小構成）</h1>
-    <div id="output">起動中...</div>
+    <!-- 実行結果、またはエラー内容がここに表示されます -->
+    <div id="output" style="font-family: monospace; white-space: pre-wrap; padding: 20px; background: #f4f4f6;">起動中...</div>
 
     <script type="module">
-        // 公式推奨のESモジュール直引インポート
+        // 👑 公式推奨の、ブラウザ直接実行用のESモジュールインポート記述
         import { pipeline } from 'https://jsdelivr.net';
 
-        async function test() {
+        async function startTest() {
+            const outputDiv = document.getElementById('output');
             try {
-                // 最も軽いQwenモデルをロード
-                const generator = await pipeline('text-generation', 'onnx-community/Qwen1.5-0.5B-Instruct', { device: 'wasm' });
-                
-                // テスト実行
-                const output = await generator('こんにちは', { max_new_tokens: 10 });
-                
-                document.getElementById('output').innerText = output[0].generated_text;
-            } catch (e) {
-                document.getElementById('output').innerText = 'エラー: ' + e.message;
+                outputDiv.innerText = "通信開始（モデル取得中）...";
+
+                // ⭕ 100%通信が通るかチェックするため、一番軽量な感情分析モデル（約40MB）でテスト
+                const classifier = await pipeline('sentiment-analysis', 'Xenova/distilbert-base-uncased-finetuned-sst-2-english', {
+                    device: 'wasm'
+                });
+
+                outputDiv.innerText = "推論実行中...";
+                const result = await classifier('I love this open source AI system!');
+
+                // 成功すれば、画面にAIの分析結果がテキストで表示されます
+                outputDiv.innerText = JSON.stringify(result, null, 2);
+
+            } catch (error) {
+                // タイムアウトやCORS、MIMEタイプエラーが起きれば、ここに事実（エラー内容）が書き出されます
+                outputDiv.innerText = '【エラー発生の事実】\n' + (error.stack || error.message || error);
             }
         }
-        test();
+        startTest();
     </script>
 </body>
 </html>
