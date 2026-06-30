@@ -1,7 +1,7 @@
 // worker.js - 完全バックグラウンドAI推論オブジェクト
 // 👑 解決策：モジュールではなく、ブラウザ標準の古典的で確実な非同期インポートスクリプトを採用。
 // これによりシンフリーサーバーの「Strict MIME type checking」エラーを100%回避します。
-importScripts('https://jsdelivr.net');
+importScripts('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0/dist/transformers.min.js');
 
 const { pipeline, env } = self["@huggingface/transformers"] || {};
 
