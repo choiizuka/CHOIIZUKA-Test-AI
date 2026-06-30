@@ -15,7 +15,7 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             margin: 0;
             padding: 0;
             background-color: var(--bg-color);
@@ -82,9 +82,7 @@
             100% { transform: rotate(360deg); }
         }
 
-        .hidden {
-            display: none !important;
-        }
+        .hidden { display: none !important; }
 
         #progress-container {
             width: 100%;
@@ -99,7 +97,7 @@
             width: 0%;
             height: 100%;
             background-color: var(--accent-color);
-            transition: width 0.1s linear;
+            transition: width 0.2s ease;
         }
 
         #chat-container {
@@ -150,6 +148,8 @@
             outline: none;
         }
 
+        #user-input:focus { border-color: var(--accent-color); }
+
         #send-btn {
             background-color: var(--accent-color);
             color: white;
@@ -176,7 +176,7 @@
         <h1>CHOIIZUKA-AI <span style="font-size:0.8rem; color:#888;">(Test Mode)</span></h1>
         <div class="status-container">
             <div id="loading-spinner" class="spinner"></div>
-            <div id="status-badge">初期化中...</div>
+            <div id="status-badge">システム起動中...</div>
         </div>
         <div id="progress-container">
             <div id="progress-bar"></div>
@@ -184,7 +184,7 @@
     </header>
 
     <div id="chat-container">
-        <div class="message ai">CHOIIZUKA-AI テスト環境へようこそ。初回のみサーバーからモデルファイルを読み込みます（約370MB）。</div>
+        <div class="message ai">CHOIIZUKA-AI テスト環境です。初回アクセス時はローカルモデルの読み込み（約370MB）を行います。完了まで少々お待ちください。</div>
     </div>
 
     <div id="input-container">
@@ -192,7 +192,7 @@
         <button id="send-btn" disabled>➔</button>
     </div>
 
-    <!-- メメイン制御スクリプトの読み込み -->
-    <script src="./main.js" type="module"></script>
+    <!-- 通常スクリプトとして、仲介プログラム（main.js）を安全にロード -->
+    <script src="main.js"></script>
 </body>
 </html>
