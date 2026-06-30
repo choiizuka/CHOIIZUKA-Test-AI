@@ -2,35 +2,39 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>MINIMUM TEST</title>
+    <title>GHPAGES AI TEST</title>
 </head>
 <body>
-    <h1>AI起動テスト（CORS・タイムアウト回避版）</h1>
-    <div id="output" style="font-family: monospace; padding: 20px; background: #f4f4f6;">起動中...</div>
+    <h1>AI起動テスト（GitHub Pages検証用）</h1>
+    <!-- 通信結果、またはエラー内容がここに表示されます -->
+    <div id="output" style="font-family: monospace; white-space: pre-wrap; padding: 20px; background: #f4f4f6;">起動中...</div>
 
     <script type="module">
-        // 👑 解決策：タイムアウトするjsdelivrを完全に排除し、安全な正規の直リンクに変更
-        import { pipeline } from 'https://unpkg.com';
+        // 👑 GitHub Pages環境なら100%CORSエラーを起こさずにインポート可能
+        import { pipeline } from 'https://jsdelivr.net';
 
-        async function test() {
-            const out = document.getElementById('output');
+        async function startTest() {
+            const outputDiv = document.getElementById('output');
             try {
-                out.innerText = "通信開始（モデル取得中）...";
+                outputDiv.innerText = "通信開始（一番軽い約40MBのモデルを取得中）...";
 
-                // 超軽量モデル（約40MB）で通信テスト
-                const classifier = await pipeline('sentiment-analysis', 'Xenova/distilbert-base-uncased-finetuned-sst-2-english', { 
-                    device: 'wasm' 
+                // まず通信が通るかチェックするため、軽量の感情分析モデルでテスト
+                const classifier = await pipeline('sentiment-analysis', 'Xenova/distilbert-base-uncased-finetuned-sst-2-english', {
+                    device: 'wasm'
                 });
-                
-                out.innerText = "推論中...";
-                const result = await classifier('Hello AI!');
-                out.innerText = JSON.stringify(result);
 
-            } catch (e) {
-                out.innerText = 'エラーの事実: ' + e.message;
+                outputDiv.innerText = "推論実行中...";
+                const result = await classifier('GitHub Pages is perfectly working!');
+
+                // 成功すれば、画面にAIの分析結果がテキストで表示されます
+                outputDiv.innerText = JSON.stringify(result, null, 2);
+
+            } catch (error) {
+                // 万が一エラーが起きれば、ここに事実が書き出されます
+                outputDiv.innerText = '【エラー発生の事実】\n' + (error.stack || error.message || error);
             }
         }
-        test();
+        startTest();
     </script>
 </body>
 </html>
