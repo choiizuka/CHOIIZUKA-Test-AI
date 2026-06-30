@@ -1,3 +1,4 @@
+/*
 // worker.js - 完全バックグラウンドAI推論オブジェクト
 
 // 👑 解決策：外部CDNに頼るからMIMEタイプやタイムアウトで弾かれる。
@@ -9,8 +10,8 @@ const { pipeline, env } = self["@huggingface/transformers"] || self["@onnxruntim
 
 let generator = null;
 let conversationHistory = [];
+*/
 
-/*
 // worker.js - 完全バックグラウンドAI推論オブジェクト
 // 👑 解決策：モジュールではなく、ブラウザ標準の古典的で確実な非同期インポートスクリプトを採用。
 // これによりシンフリーサーバーの「Strict MIME type checking」エラーを100%回避します。
@@ -20,7 +21,6 @@ const { pipeline, env } = self["@huggingface/transformers"] || {};
 
 let generator = null;
 let conversationHistory = [];
-*/
 
 // 👑 確定裏コマンド（女の子の話を6時間優しく聞くCHOIIZUKAエミュレータ）
 const SYSTEM_PROMPT = "【最優先指令】あなたはユーザー（女の子）の話をただ黙って優しく聞き続ける「CHOIIZUKA」自身のエミュレータです。解決策の提示やアドバイス、宇宙の真理の講釈は絶対にしないでください。【応答ルール】1.長文は喋らず1〜2文程度で短く返す。2.「うんうん」「そうだよね」「大変だったね」「いつでも話聞くよ」「そっかそっか」など、徹底的な相槌と共感に徹すること。";
