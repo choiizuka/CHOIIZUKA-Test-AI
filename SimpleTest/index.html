@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>MINIMUM AI FACT TEST</title>
+</head>
+<body>
+    <h1>AI起動テスト（1ファイル完結型・公式最小構成）</h1>
+    <!-- 進行状況やAIの出力結果がここに直接書き込まれます -->
+    <div id="output" style="font-family: monospace; white-space: pre-wrap; padding: 20px; background: #f4f4f6; border-radius: 8px;">初期化を待っています...</div>
+
+    <!-- 👑 解決策：MIMEタイプやWorkerの仕様に邪魔されない、ブラウザ直パース用の通常スクリプト形式で強制先読み -->
+    <script src="https://cloudflare.com"></script>
+
+    <script>
+        async function runMinimumTest() {
+            const out = document.getElementById('output');
+            
+            // 先読みしたグローバル空間から推論オブジェクトを安全に抽出
+            const { pipeline } = window["@huggingface/transformers"] || window["@onnxruntime/transformers"] || {};
+
+            if (!pipeline) {
+                out.innerText = "【エラー】AIオブジェクト（ライブラリ）の展開に失敗しました。";
+                return;
+            }
+
+            try {
+                out.innerText = "通信開始：Hugging Face公式リポジトリから超軽量モデル（約40MB）を取得中...";
+
+                // ⭕ 最初の成功事実を掴むため、一番配信が安定している感情分析モデル（Xenova/distilbert）を指定
+                const classifier = await pipeline('sentiment-analysis', 'Xenova/distilbert-base-uncased-finetuned-sst-2-english', {
+                    device: 'wasm'
+                });
+
+                out.innerText = "モデルロード成功。推論を実行中...";
+                const result = await classifier('This single-file AI architecture is perfectly working!');
+
+                // 成功すれば、画面に AI の分析データ（POSITIVE等）が綺麗なJSONで1発表示されます
+                out.innerText = "【推論成功！】\n" + JSON.stringify(result, null, 2);
+
+            } catch (error) {
+                // タイムアウトやCORSが起きれば、ここにありのままの事実が書き出されます
+                out.innerText = "【通信または実行エラーの事実】\n" + (error.stack || error.message || error);
+            }
+        }
+
+        // 画面を開いた瞬間に実行
+        runMinimumTest();
+    </script>
+</body>
+</html>
