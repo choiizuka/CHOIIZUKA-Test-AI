@@ -1,0 +1,6 @@
+# 1. ONNXファイルを正しいバイナリデータとして認識させる
+AddType application/octet-stream .onnx AddType application/wasm .wasm
+
+# 2. サーバー側でのリアルタイム圧縮（Gzip等）を強制禁止する
+# ※350MBのファイルをサーバーのCPUで圧縮しようとしてハングアップするのを防ぎます
+SetEnvIfNoCase Request_URI \.onnx$ no-gzip dont-vary SetEnvIfNoCase Request_URI \.wasm$ no-gzip dont-vary
