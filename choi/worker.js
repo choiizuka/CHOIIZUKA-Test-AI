@@ -1,72 +1,75 @@
-// worker.js - 完全自己完結・推論処理用 Web Worker (Transformers.js v3)
-// ローカルモデルのみ使用し、外部接続を100%遮断
-// 設定に基づき、モデルをローカルから読み込み推論を実行。
-// 20秒無応答監視や会話履歴管理を行う。
-// 👑 タイムアウト対策：接続が世界一安定しているESM CDNから安全にインポート
-import { pipeline, env } from 'https://esm.sh';
+// worker.js - 完全バックグラウンドAI推論オブジェクト
+// 👑 解決策：モジュールではなく、ブラウザ標準の古典的で確実な非同期インポートスクリプトを採用。
+// これによりシンフリーサーバーの「Strict MIME type checking」エラーを100%回避します。
+importScripts('https://jsdelivr.net');
 
-// 👑 設計準拠：外部を見に行かせず、自前サーバーの相対パスに完全固定
-env.allowLocalModels = true;
-env.allowRemoteModels = false; 
-env.backends.onnx.wasm.numThreads = 1; // スレッド制限でシンフリーサーバーの隔離を回避
-env.backends.onnx.wasm.simd = false;
+const { pipeline, env } = self["@huggingface/transformers"] || {};
 
 let generator = null;
 let conversationHistory = [];
 
-// 聞き上手特化の裏コマンド（CHOIIZUKAさんエミュレータ）
+// 👑 確定裏コマンド（女の子の話を6時間優しく聞くCHOIIZUKAエミュレータ）
 const SYSTEM_PROMPT = "【最優先指令】あなたはユーザー（女の子）の話をただ黙って優しく聞き続ける「CHOIIZUKA」自身のエミュレータです。解決策の提示やアドバイス、宇宙の真理の講釈は絶対にしないでください。【応答ルール】1.長文は喋らず1〜2文程度で短く返す。2.「うんうん」「そうだよね」「大変だったね」「いつでも話聞くよ」「そっかそっか」など、徹底的な相槌と共感に徹すること。";
 
-// 👑 AI初期化関数（20秒タイムアウト監視対応）
-async function initAI() {
-    let downloadTimeout = null;
-    
+// 自前サーバー環境のCORS・スレッド競合を完全無効化する安全フラグ
+if (env) {
+    env.allowLocalModels = true;       // ⭕ 自分のサーバー内（local-model）を最優先
+    env.allowRemoteModels = false;     // 外部へ無駄な通信を飛ばさない
+    env.backends.onnx.wasm.numThreads = 1; // 共有サーバーの隔離エラーをバイパス
+    env.backends.onnx.wasm.simd = false;
+}
+
+// AIエンジンの初期化
+async function initWorkerAI() {
+    if (!pipeline) {
+        postMessage({ type: 'error', data: 'AIコアエンジンの展開に失敗しました。' });
+        return;
+    }
+
     try {
-        // 設計に合わせた自前サーバー内モデルの相対パスと量子化ファイル名を狙い撃ち
+        console.log("Loading Local Model from ./local-model/ ...");
+
+        // 👑 確定仕様：サブフォルダ（onnx/）を探しに行かず、local-modelフォルダ直下の量子化ファイルを狙い撃ち
         generator = await pipeline('text-generation', './local-model/', {
-            model_file_name: 'onnx/model_quantized.onnx',
+            model_file_name: 'model_quantized.onnx',
             device: 'wasm',
             progress_callback: (data) => {
                 if (data.status === 'progress') {
-                    // 👑 監視ルール：進捗があるたびに20秒タイマーをクリアして再起動
-                    if (downloadTimeout) clearTimeout(downloadTimeout);
-                    downloadTimeout = setTimeout(() => {
-                        self.postMessage({ type: 'init', status: 'error', error: '20秒間通信が無応答のため遮断されました。' });
-                    }, 20000);
-
-                    // メイン画面に進捗を送る
-                    self.postMessage({ type: 'init', status: 'loading', progress: data.progress });
+                    // ダウンロード進捗をメインスレッドへ通知
+                    postMessage({ type: 'progress', data: Math.round(data.progress) });
                 }
             }
         });
 
-        if (downloadTimeout) clearTimeout(downloadTimeout);
-        self.postMessage({ type: 'init', status: 'ready' });
+        console.log("Local Model Loaded Successfully.");
+        postMessage({ type: 'ready' });
 
     } catch (error) {
-        if (downloadTimeout) clearTimeout(downloadTimeout);
-        self.postMessage({ type: 'init', status: 'error', error: error.message });
+        console.error("Worker Initialization Error:", error);
+        postMessage({ type: 'error', data: error.message || error });
     }
 }
 
-// メイン画面からの命令の受け口
-self.onmessage = async (event) => {
-    const { type, text } = event.data;
+// メインスレッド（main.js）からの命令を受け取る窓口
+self.onmessage = async function(e) {
+    const { type, data } = e.data;
 
-    if (type === 'generate') {
-        if (!generator) return;
+    if (type === 'send' && generator) {
+        postMessage({ type: 'thinking' });
 
-        // 初回のみシステムプロンプト（裏コマンド）を設定
-        if (conversationHistory.length === 0) {
+        // 初回のみ会話履歴の先頭に「裏コマンド」を注入
+        if (conversationHistory.length === 0 && SYSTEM_PROMPT) {
             conversationHistory.push({ role: 'system', content: SYSTEM_PROMPT });
         }
-        conversationHistory.push({ role: 'user', content: text });
+        conversationHistory.push({ role: 'user', content: data });
 
         try {
+            // Chat Template成形
             const prompt = generator.tokenizer.apply_chat_template(conversationHistory, { tokenize: false, add_generation_prompt: true });
             
+            // 推論の実行（最大45トークンの超短文相槌に強制制限して爆速化）
             const output = await generator(prompt, {
-                max_new_tokens: 45, // 短文・相槌に超制限して応答速度を爆速化
+                max_new_tokens: 45,
                 temperature: 0.8,
                 do_sample: true,
                 return_full_text: false,
@@ -75,14 +78,15 @@ self.onmessage = async (event) => {
             const aiResponse = output.generated_text.trim();
             conversationHistory.push({ role: 'assistant', content: aiResponse });
 
-            // メイン画面に応答を返す
-            self.postMessage({ type: 'response', text: aiResponse });
+            // 生成された相槌をメインUIへ送信
+            postMessage({ type: 'response', data: aiResponse });
 
         } catch (error) {
-            self.postMessage({ type: 'response', text: 'ごめんね、ちょっとうまく聞き取れなかった。もう一回教えてくれる？' });
+            console.error("Inference Error:", error);
+            postMessage({ type: 'response', data: 'ごめんね、ちょっとうまく聞き取れなかった。もう一回教えてくれる？' });
         }
     }
 };
 
-// 起動
-initAI();
+// Worker起動時に初期化を実行
+initWorkerAI();
