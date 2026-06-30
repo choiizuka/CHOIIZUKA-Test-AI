@@ -2,39 +2,35 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>MINIMUM AI TEST</title>
+    <title>MINIMUM TEST</title>
 </head>
 <body>
-    <h1>AI起動テスト（公式最小構成）</h1>
-    <!-- 実行結果、またはエラー内容がここに表示されます -->
-    <div id="output" style="font-family: monospace; white-space: pre-wrap; padding: 20px; background: #f4f4f6;">起動中...</div>
+    <h1>AI起動テスト（CORS・タイムアウト回避版）</h1>
+    <div id="output" style="font-family: monospace; padding: 20px; background: #f4f4f6;">起動中...</div>
 
     <script type="module">
-        // 👑 公式推奨の、ブラウザ直接実行用のESモジュールインポート記述
-        import { pipeline } from 'https://jsdelivr.net';
+        // 👑 解決策：タイムアウトするjsdelivrを完全に排除し、安全な正規の直リンクに変更
+        import { pipeline } from 'https://unpkg.com';
 
-        async function startTest() {
-            const outputDiv = document.getElementById('output');
+        async function test() {
+            const out = document.getElementById('output');
             try {
-                outputDiv.innerText = "通信開始（モデル取得中）...";
+                out.innerText = "通信開始（モデル取得中）...";
 
-                // ⭕ 100%通信が通るかチェックするため、一番軽量な感情分析モデル（約40MB）でテスト
-                const classifier = await pipeline('sentiment-analysis', 'Xenova/distilbert-base-uncased-finetuned-sst-2-english', {
-                    device: 'wasm'
+                // 超軽量モデル（約40MB）で通信テスト
+                const classifier = await pipeline('sentiment-analysis', 'Xenova/distilbert-base-uncased-finetuned-sst-2-english', { 
+                    device: 'wasm' 
                 });
+                
+                out.innerText = "推論中...";
+                const result = await classifier('Hello AI!');
+                out.innerText = JSON.stringify(result);
 
-                outputDiv.innerText = "推論実行中...";
-                const result = await classifier('I love this open source AI system!');
-
-                // 成功すれば、画面にAIの分析結果がテキストで表示されます
-                outputDiv.innerText = JSON.stringify(result, null, 2);
-
-            } catch (error) {
-                // タイムアウトやCORS、MIMEタイプエラーが起きれば、ここに事実（エラー内容）が書き出されます
-                outputDiv.innerText = '【エラー発生の事実】\n' + (error.stack || error.message || error);
+            } catch (e) {
+                out.innerText = 'エラーの事実: ' + e.message;
             }
         }
-        startTest();
+        test();
     </script>
 </body>
 </html>
