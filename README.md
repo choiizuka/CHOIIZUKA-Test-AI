@@ -94,6 +94,43 @@ qwen-model/
 
 ---
 
+## 仕様書のアップデート
+
+## 👑 【CHOIIZUKA-AI】テスト設置仕様書（確定版）## 1. 📂 設置ディレクトリ構造（サーバー側）
+シンフリーサーバーの /public_html/TestAI/ ディレクトリ配下に、UI、ロジック、およびモデルアセットをすべて配置する。トラブル要因を排除するため、フォルダ階層は極限まで浅く（フラットに）設計する。
+
+public_html/TestAI/
+│
+├── index.html                  📄 チャット画面UI（HTML/CSS）
+├── main.js                     📄 メインスレッド制御（UI・通信仲介）
+├── worker.js                   📄 バックグラウンドAI推論処理（Web Worker）
+│
+└── local-model/                📂 抽象化モデル格納フォルダ（固有名詞の完全排除）
+    ├── .htaccess               📄 配信最適化・CORS解除設定
+    ├── config.json             📄 AI基本構成設定（JSON 5種）
+    ├── generation_config.json  📄 文章生成用設定
+    ├── tokenizer.json          📄 トークナイザー辞書データ
+    ├── tokenizer_config.json   📄 辞書用構成ファイル
+    ├── special_tokens_map.json 📄 特殊トークンマッピング
+    └── model_quantized.onnx    📄 量子化AIモデル本体（約370MB ※直下に配置）
+
+------------------------------
+
+## 2. 🛠️ インフラ制御仕様（local-model/.htaccess）
+自前サーバー（共有環境）への負荷を抑え、大容量バイナリをブラウザへ安全にストリーミング配信するための固有定義。
+
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+</IfModule>
+AddType application/octet-stream .onnx
+SetEnvIf Request_URI "\.onnx$" no-gzip
+
+
+* CORS全面解放：ブラウザのセキュリティによる通信遮断を物理的に回避する。
+* no-gzipの適用：サーバーのCPUが自動圧縮（Gzip）を試みてハングアップ（503エラー）するのを防止する。
+
+------------------------------
+
 ---
 
 ## 関連記事
