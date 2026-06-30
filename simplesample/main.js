@@ -5,8 +5,8 @@
     const outputDiv = document.getElementById('output');
 
     // 設計書通り、完全ローカル配置されたClassic Workerを生成
-    //const aiWorker = new Worker('worker.js');
-    const worker = new Worker('worker.js', { type: 'module' });
+    const aiWorker = new Worker('worker.js');
+    //const worker = new Worker('worker.js', { type: 'module' });
     
     aiWorker.onmessage = function(e) {
         const { type, data } = e.data;
