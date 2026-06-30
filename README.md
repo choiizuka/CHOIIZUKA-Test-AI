@@ -317,6 +317,7 @@ Qwen2.5-0.
 ## 関連URL
 
 ### Tlansformers
+- [transformers@3.0.0](https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0/dist/)
 - [transformers@4.1.0](https://app.unpkg.com/@huggingface/transformers@4.1.0/files/dist)
 
 ### Models
