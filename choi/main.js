@@ -7,10 +7,10 @@ const statusBadge = document.getElementById('status-badge');
 const progressBar = document.getElementById('progress-bar');
 const loadingSpinner = document.getElementById('loading-spinner');
 
-// 👑 Web Worker の生成（バックグラウンドスレッドを立ち上げる）
-const aiWorker = new Worker('./worker.js', { type: 'module' });
+// 👑 Web Workerを起動
+const aiWorker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
 
-// メッセージ画面追加関数
+// メッセージ表示関数
 function appendMessage(sender, text) {
     const msgBubble = document.createElement('div');
     msgBubble.classList.add('message', sender);
@@ -19,21 +19,16 @@ function appendMessage(sender, text) {
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-// 👑 Worker から届くステータスやAIの返答を受信して画面を更新する
-aiWorker.onmessage = function(e) {
-    const { type, data } = e.data;
+// 👑 Workerからの通知を受け取るイベント
+aiWorker.onmessage = (event) => {
+    const { type, status, progress, text, error } = event.data;
 
-    switch (type) {
-        case 'STATUS':
-            statusBadge.innerText = data;
-            break;
-            
-        case 'PROGRESS':
-            progressBar.style.width = `${data}%`;
-            statusBadge.innerText = `ダウンロード中: ${Math.round(data)}%`;
-            break;
-
-        case 'READY':
+    if (type === 'init') {
+        if (status === 'loading') {
+            loadingSpinner.classList.remove('hidden');
+            progressBar.style.width = `${progress}%`;
+            statusBadge.innerText = `ダウンロード中: ${Math.round(progress)}%`;
+        } else if (status === 'ready') {
             loadingSpinner.classList.add('hidden');
             statusBadge.innerText = "準備完了";
             statusBadge.classList.add('ready');
@@ -42,31 +37,27 @@ aiWorker.onmessage = function(e) {
             userInput.disabled = false;
             sendBtn.disabled = false;
             appendMessage('ai', 'お疲れ様！今日も大変だったね。ここに君の気持ち、全部吐き出しちゃっていいよ。ずっと話聞いてるからね。');
-            break;
-
-        case 'RESPONSE':
-            // AIからの回答を画面に出力
-            loadingSpinner.classList.add('hidden');
-            statusBadge.innerText = "準備完了";
-            appendMessage('ai', data);
-            userInput.disabled = false;
-            sendBtn.disabled = false;
-            userInput.focus();
-            break;
-
-        case 'ERROR':
+        } else if (status === 'error') {
             loadingSpinner.classList.add('hidden');
             statusBadge.innerText = "エラー発生";
             statusBadge.classList.add('error');
-            appendMessage('ai', `起動または通信中にエラーが起きたみたい。リロードしてみてね。\n(詳細: ${data})`);
-            break;
+            appendMessage('ai', `起動エラー: ${error}`);
+        }
+    } else if (type === 'response') {
+        // AIの思考が完了した時
+        appendMessage('ai', text);
+        userInput.disabled = false;
+        sendBtn.disabled = false;
+        loadingSpinner.classList.add('hidden');
+        statusBadge.innerText = "準備完了";
+        userInput.focus();
     }
 };
 
-// 送信ボタンのクリックイベント
-async function handleSend() {
+// 送信処理
+function handleSend() {
     const text = userInput.value.trim();
-    if (!text) return;
+    if (!text || userInput.disabled) return;
 
     appendMessage('user', text);
     userInput.value = '';
@@ -75,8 +66,8 @@ async function handleSend() {
     statusBadge.innerText = "うんうん...";
     loadingSpinner.classList.remove('hidden');
 
-    // 👑 Worker にユーザーのテキストを送信し、裏で推論を行わせる
-    aiWorker.postMessage({ type: 'SEND', data: text });
+    // Workerにユーザーのテキストを送信して推論を行わせる
+    aiWorker.postMessage({ type: 'generate', text: text });
 }
 
 sendBtn.addEventListener('click', handleSend);
