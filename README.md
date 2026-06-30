@@ -327,4 +327,9 @@ Qwen2.5-0.
 ### Status
 - [huggingface status](https://status.huggingface.co/)
 
+### Demo
+- [Hugging Face公式：Vanilla JS テストデモ（GitHubベース）](https://github.com/huggingface/transformers.js-examples)
+
+---
+
 (C) 2026 CHOIIZUKA.
