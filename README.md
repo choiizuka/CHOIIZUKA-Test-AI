@@ -316,6 +316,9 @@ Qwen2.5-0.
 
 ## 関連URL
 
+### Tlansformers
+- [transformers@4.1.0](https://app.unpkg.com/@huggingface/transformers@4.1.0/files/dist)
+
 ### Models
 - [@huggingface-Xenova/distilbert-base-uncased-finetuned-sst-2-english](https://huggingface.co/Xenova/distilbert-base-uncased-finetuned-sst-2-english/)
 - [@huggingface-Qwen2.5-0.5B-Instruct](https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct)
